@@ -52,11 +52,11 @@ COPY package*.json ./
 # Install app dependencies
 RUN npm install
 
+# Copy rest of app (needed before installing Chrome so .puppeteerrc.js's cacheDirectory is honored)
+COPY . .
+
 # Install puppeteer (downloads its matching Chromium)
 RUN npx puppeteer browsers install chrome
-
-# Copy rest of app
-COPY . .
 
 # Set tini as the entrypoint
 ENTRYPOINT ["/usr/bin/tini", "--"]
