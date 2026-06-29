@@ -8,14 +8,14 @@
 async function login(page, url, username, password) {
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    await page.waitForSelector('#userid', { visible: true });
-    await page.type('#userid', username);
+    await page.waitForSelector('[id="idcs-signin-basic-signin-form-username|input"]', { visible: true });
+    await page.type('[id="idcs-signin-basic-signin-form-username|input"]', username);
 
-    await page.waitForSelector('#password', { visible: true });
-    await page.type('#password', password);
+    await page.waitForSelector('[id="idcs-signin-basic-signin-form-password|input"]', { visible: true });
+    await page.type('[id="idcs-signin-basic-signin-form-password|input"]', password);
 
-    await page.waitForSelector('#btnActive', { visible: true });
-    await page.click('#btnActive');
+    await page.waitForSelector('#idcs-signin-basic-signin-form-submit', { visible: true });
+    await page.click('#idcs-signin-basic-signin-form-submit');
 
     console.log('Login submitted');
 }
