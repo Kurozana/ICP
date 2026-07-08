@@ -313,19 +313,6 @@ async function automateAction(req, res) {
         }
 
     } catch (error) {
-        // Capture what the browser was looking at when it failed
-        if (page && !page.isClosed()) {
-            try {
-                const screenshotsDir = path.join(__dirname, 'screenshots');
-                fs.mkdirSync(screenshotsDir, { recursive: true });
-                const screenshotPath = path.join(screenshotsDir, `${RequestID}-${Date.now()}.png`);
-                await page.screenshot({ path: screenshotPath, fullPage: true });
-                console.log('Failure screenshot saved: ' + screenshotPath);
-            } catch (screenshotError) {
-                console.error('Failed to capture failure screenshot: ' + screenshotError.message);
-            }
-        }
-
         // Handle all other errors
         if (error instanceof AutomationError) {
             console.error("Custom AutomationError handled: " + error.message);
