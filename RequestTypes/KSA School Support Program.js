@@ -14,7 +14,9 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         ClaimType,
         SchoolFeeType,
         PaidAmount,
-        Child
+        Child,
+        SchoolName,
+        ChildGrade
     } = body;
 
     console.log('validating fields of :' + plan);
@@ -322,6 +324,24 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
             }
         }
 
+        // -------- School Name --------
+        if (exists(SchoolName)) {
+            const inputSelectorSchoolName = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:screenEntryValue\\:\\:content"]';
+            await page.waitForSelector(inputSelectorSchoolName, { visible: true });
+            await page.click(inputSelectorSchoolName, { clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await page.type(inputSelectorSchoolName, SchoolName);
+        }
+
+        // -------- Child Grade --------
+        if (exists(ChildGrade)) {
+            const inputSelectorChildGrade = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:40\\:screenEntryValue\\:\\:content"]';
+            await page.waitForSelector(inputSelectorChildGrade, { visible: true });
+            await page.click(inputSelectorChildGrade, { clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await page.type(inputSelectorChildGrade, ChildGrade);
+        }
+
     } catch (error) {
         console.error('Retrying...|Error occurred while filling form ' + plan);
         if (error instanceof AutomationError) {
@@ -558,6 +578,24 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
             if (!childFound) {
                 throw new AutomationError('No child exist with this provided name: ' + Child, plan, personNumber, RequestID);
             }
+        }
+
+        // -------- School Name --------
+        if (exists(SchoolName)) {
+            const inputSelectorSchoolName = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:screenEntryValue\\:\\:content"]';
+            await page.waitForSelector(inputSelectorSchoolName, { visible: true });
+            await page.click(inputSelectorSchoolName, { clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await page.type(inputSelectorSchoolName, SchoolName);
+        }
+
+        // -------- Child Grade --------
+        if (exists(ChildGrade)) {
+            const inputSelectorChildGrade = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:40\\:screenEntryValue\\:\\:content"]';
+            await page.waitForSelector(inputSelectorChildGrade, { visible: true });
+            await page.click(inputSelectorChildGrade, { clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await page.type(inputSelectorChildGrade, ChildGrade);
         }
     }
     //Wait for error popup
