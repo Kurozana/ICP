@@ -332,12 +332,12 @@ async function automateAction(req, res) {
 //Mendix post API Handling
 function HandleResponse(Plan, EmployeeID, RequestID, Status, Message) {
     const payload = {
-        Plan: String(Plan),
-        EmployeeID: String(EmployeeID),
-        Status: String(Status),
-        UpdatedDate: new Date().toISOString(),
-        RequestID: String(RequestID),
-        Message: String(Message)
+        plan: String(Plan),
+        employeeID: String(EmployeeID),
+        status: String(Status),
+        updatedDate: new Date().toISOString(),
+        requestID: String(RequestID),
+        message: String(Message)
     };
     console.log('payload:', JSON.stringify(payload, null, 2));
     const config = {
