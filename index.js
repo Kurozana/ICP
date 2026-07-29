@@ -421,12 +421,15 @@ app.post('/update-env', (req, res) => {
         3️⃣ Remove the existing container:
             sudo docker rm icp_PROD
 
-        4️⃣ Start a new container using the updated .env file:
+        4️⃣ Pull the latest image (a restart alone will NOT fetch it):
+            sudo docker pull ialboiez/icp:latest
+
+        5️⃣ Start a new container using the updated .env file:
             sudo docker run -d --name icp_PROD \\
                 --env-file Files/.env \\
-                -p 3000:3000 \\
+                -p ${PORT}:${PORT} \\
                 --restart always \\
-                jebershon/node-automate:v18_PROD_P3000`
+                ialboiez/icp:latest`
     );
 });
 
