@@ -97,9 +97,29 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         await page.waitForSelector(sel, { visible: true });
         await page.click(sel, { clickCount: 3 });
         await page.keyboard.press('Backspace');
-        await page.type(sel, value);
-        await sleep(2000);
-        await page.waitForSelector(pop, { visible: true });
+        await page.type(sel, value, { delay: 120 });
+        await sleep(3000);
+        try {
+            await page.waitForSelector(pop, { visible: true, timeout: 20000 });
+        } catch (e) {
+            // Diagnostic: capture the child field value + any autosuggest popup state so we can see why it didn't render
+            try {
+                const diag = await page.evaluate((contentSel) => {
+                    const inp = document.querySelector(contentSel);
+                    const pops = Array.from(document.querySelectorAll('[id*="_afrautosuggestpopup"]'));
+                    return {
+                        value: inp ? inp.value : 'NO_INPUT',
+                        popCount: pops.length,
+                        popIds: pops.map(p => p.id),
+                        popHtml: pops.map(p => (p.innerHTML || '').slice(0, 400))
+                    };
+                }, sel);
+                console.log('CHILD_DIAG:' + JSON.stringify(diag));
+            } catch (d) {
+                console.log('CHILD_DIAG_ERR:' + d.message);
+            }
+            throw e;
+        }
         const childFound = await page.evaluate((popSel, childName) => {
             const items = document.querySelectorAll(popSel);
             for (let item of items) {
@@ -142,6 +162,9 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
 
         // Paid Amount (evIter:33)
         await fillNumber(33, PaidAmount);
+        // Commit Paid Amount so Fusion recomputes child eligibility before the Child LOV renders
+        await page.keyboard.press('Tab');
+        await sleep(4000);
 
         // Child (evIter:34)
         await fillChild(Child);
