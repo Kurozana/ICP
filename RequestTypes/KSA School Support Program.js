@@ -99,44 +99,22 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         await page.keyboard.press('Backspace');
         await page.type(sel, value, { delay: 120 });
         await sleep(3000);
-        try {
-            await page.waitForSelector(pop, { visible: true, timeout: 20000 });
-        } catch (e) {
-            // Diagnostic: capture the child field value + any autosuggest popup state so we can see why it didn't render
-            try {
-                const diag = await page.evaluate((contentSel) => {
-                    const inp = document.querySelector(contentSel);
-                    const pops = Array.from(document.querySelectorAll('[id*="_afrautosuggestpopup"]'));
-                    return {
-                        value: inp ? inp.value : 'NO_INPUT',
-                        popCount: pops.length,
-                        popIds: pops.map(p => p.id),
-                        popHtml: pops.map(p => (p.innerHTML || '').slice(0, 400))
-                    };
-                }, sel);
-                console.log('CHILD_DIAG:' + JSON.stringify(diag));
-            } catch (d) {
-                console.log('CHILD_DIAG_ERR:' + d.message);
-            }
-            throw e;
-        }
-        const childResult = await page.evaluate((popSel, childName) => {
+        await page.waitForSelector(pop, { visible: true });
+        const childFound = await page.evaluate((popSel, childName) => {
             const norm = (s) => (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
             const target = norm(childName);
             const items = Array.from(document.querySelectorAll(popSel));
-            const texts = items.map(i => i.innerText);
             for (let item of items) {
                 const t = norm(item.innerText);
-                if (t === "no results found.") return { found: false, texts };
+                if (t === "no results found.") return false;
                 if (t === target || t.startsWith(target)) {
                     item.click();
-                    return { found: true, texts };
+                    return true;
                 }
             }
-            return { found: false, texts };
+            return false;
         }, pop, value);
-        console.log('CHILD_OPTIONS:' + JSON.stringify(childResult.texts));
-        if (!childResult.found) {
+        if (!childFound) {
             throw new AutomationError('No child exist with this provided name: ' + value, plan, personNumber, RequestID);
         }
     }
