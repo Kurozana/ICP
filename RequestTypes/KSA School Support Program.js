@@ -83,8 +83,8 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
     }
 
     async function fillText(iter, value) {
-        // Free-text fields (School Name / Child Grade) use the evText suffix in the new form
-        const sel = `input[id="${PREFIX}${iter}\\:evText\\:\\:content"]`;
+        // Free-text fields (School Name / Child Grade) use the screenEntryValue suffix
+        const sel = `input[id="${PREFIX}${iter}\\:screenEntryValue\\:\\:content"]`;
         await page.waitForSelector(sel, { visible: true });
         await page.click(sel, { clickCount: 3 });
         await page.keyboard.press('Backspace');
