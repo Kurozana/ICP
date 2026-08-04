@@ -120,20 +120,23 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
             }
             throw e;
         }
-        const childFound = await page.evaluate((popSel, childName) => {
-            const items = document.querySelectorAll(popSel);
+        const childResult = await page.evaluate((popSel, childName) => {
+            const norm = (s) => (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            const target = norm(childName);
+            const items = Array.from(document.querySelectorAll(popSel));
+            const texts = items.map(i => i.innerText);
             for (let item of items) {
-                if (item.innerText.trim() === childName) {
+                const t = norm(item.innerText);
+                if (t === "no results found.") return { found: false, texts };
+                if (t === target || t.startsWith(target)) {
                     item.click();
-                    return true;
-                }
-                if (item.innerText.trim().toLowerCase() === "no results found.") {
-                    return false;
+                    return { found: true, texts };
                 }
             }
-            return false;
+            return { found: false, texts };
         }, pop, value);
-        if (!childFound) {
+        console.log('CHILD_OPTIONS:' + JSON.stringify(childResult.texts));
+        if (!childResult.found) {
             throw new AutomationError('No child exist with this provided name: ' + value, plan, personNumber, RequestID);
         }
     }
