@@ -36,8 +36,8 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // New form region prefix (form was migrated; fields now live under MAnt2/.../cse1Rgn:1:evIter:NN)
-    const PREFIX = '_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAnt2\\:0\\:vcnbUpl\\:UPsp1\\:vcnbRgn\\:0\\:GPmtfr0\\:0\\:addPse\\:cse1Rgn\\:1\\:evIter\\:';
+    // Field region prefix (unchanged); only the evIter numbers shifted after two new fields were added
+    const PREFIX = '_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:';
 
     // ---- Field field-fill helpers ----
     async function selectLov(iter, value) {
