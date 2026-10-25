@@ -103,7 +103,7 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         await sleep(3000);
         await page.waitForSelector(pop, { visible: true });
         const childFound = await page.evaluate((popSel, childName) => {
-            const norm = (s) => (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            const norm = (s) => (s || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
             const target = norm(childName);
             const items = Array.from(document.querySelectorAll(popSel));
             for (let item of items) {
