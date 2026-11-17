@@ -304,15 +304,6 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }, TicketRequired1);
         }
 
-        if (exists(DepartureTime1)) {
-            // Departure Time1
-            const inputSelector5 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:10\\:screenEntryValueDate\\:\\:content"]';
-            await page.waitForSelector(inputSelector5, { visible: true });
-            await page.click(inputSelector5, { clickCount: 3 });
-            await page.keyboard.press('Backspace');
-            await page.type(inputSelector5, DepartureTime1); // Replace DepartureTime1 with your actual value (e.g., '2:30 PM')
-        }
-
         try {
             //Hotel Booking1
             await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
@@ -354,7 +345,58 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }, HotelBooking1); // Replace PaymentMethod with a string like "Cash"
         }
 
+        // Departure Time1 comes AFTER Hotel Booking1. The migrated form splits the payload time into two
+        // dropdowns: Hour (evIter:16) and Period (evIter:17). e.g. "09:00 AM" -> hour "9", period "AM"
+        if (exists(DepartureTime1)) {
+            const departureParts1 = DepartureTime1.trim().split(/\s+/);
+            const departureHour1 = String(parseInt(departureParts1[0], 10));
+            const departurePeriod1 = (departureParts1[1] || '').toUpperCase();
+
+            // Departure Time / Hour (evIter:16): dropdown — click the matching option, else throw (sent to Mendix).
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+            await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+            const departureHourSelected = await page.evaluate((departureHour1) => {
+                const options = document.querySelectorAll(
+                    '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:pop li'
+                );
+                for (let option of options) {
+                    if (option.innerText.trim() === departureHour1) {
+                        option.scrollIntoView();
+                        option.click();
+                        return true;
+                    }
+                }
+                return false;
+            }, departureHour1);
+            if (!departureHourSelected) {
+                throw new AutomationError(`Departure Time "${departureHour1}" is not an available option`, plan, personNumber, RequestID);
+            }
+
+            // Departure Period (evIter:17): AM/PM dropdown — click the matching option, else throw (sent to Mendix).
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+            await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+            const departurePeriodSelected = await page.evaluate((departurePeriod1) => {
+                const options = document.querySelectorAll(
+                    '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                );
+                for (let option of options) {
+                    if (option.innerText.trim() === departurePeriod1) {
+                        option.scrollIntoView();
+                        option.click();
+                        return true;
+                    }
+                }
+                return false;
+            }, departurePeriod1);
+            if (!departurePeriodSelected) {
+                throw new AutomationError(`Departure Period "${departurePeriod1}" is not an available option`, plan, personNumber, RequestID);
+            }
+        }
+
     } catch (error) {
+        if (error instanceof AutomationError) throw error; // validation errors (e.g. departure) surface immediately — no full retry
         console.log("Retrying..| Error filling trip 1 fields");
 
         // Purpose of Travel
@@ -522,15 +564,6 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }, TicketRequired1);
         }
 
-        if (exists(DepartureTime1)) {
-            // Departure Time1
-            const inputSelector5 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:10\\:screenEntryValueDate\\:\\:content"]';
-            await page.waitForSelector(inputSelector5, { visible: true });
-            await page.click(inputSelector5, { clickCount: 3 });
-            await page.keyboard.press('Backspace');
-            await page.type(inputSelector5, DepartureTime1); // Replace DepartureTime1 with your actual value (e.g., '2:30 PM')
-        }
-
         try {
             //Hotel Booking1
             await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
@@ -571,6 +604,56 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }
             }, HotelBooking1); // Replace PaymentMethod with a string like "Cash"
         }
+
+        // Departure Time1 comes AFTER Hotel Booking1. The migrated form splits the payload time into two
+        // dropdowns: Hour (evIter:16) and Period (evIter:17). e.g. "09:00 AM" -> hour "9", period "AM"
+        if (exists(DepartureTime1)) {
+            const departureParts1 = DepartureTime1.trim().split(/\s+/);
+            const departureHour1 = String(parseInt(departureParts1[0], 10));
+            const departurePeriod1 = (departureParts1[1] || '').toUpperCase();
+
+            // Departure Time / Hour (evIter:16): dropdown — click the matching option, else throw (sent to Mendix).
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+            await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+            const departureHourSelected = await page.evaluate((departureHour1) => {
+                const options = document.querySelectorAll(
+                    '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:16\\:lovScreenEntryValue\\:\\:pop li'
+                );
+                for (let option of options) {
+                    if (option.innerText.trim() === departureHour1) {
+                        option.scrollIntoView();
+                        option.click();
+                        return true;
+                    }
+                }
+                return false;
+            }, departureHour1);
+            if (!departureHourSelected) {
+                throw new AutomationError(`Departure Time "${departureHour1}" is not an available option`, plan, personNumber, RequestID);
+            }
+
+            // Departure Period (evIter:17): AM/PM dropdown — click the matching option, else throw (sent to Mendix).
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+            await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+            await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+            const departurePeriodSelected = await page.evaluate((departurePeriod1) => {
+                const options = document.querySelectorAll(
+                    '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                );
+                for (let option of options) {
+                    if (option.innerText.trim() === departurePeriod1) {
+                        option.scrollIntoView();
+                        option.click();
+                        return true;
+                    }
+                }
+                return false;
+            }, departurePeriod1);
+            if (!departurePeriodSelected) {
+                throw new AutomationError(`Departure Period "${departurePeriod1}" is not an available option`, plan, personNumber, RequestID);
+            }
+        }
     }
     //TRIP 2(optional)
     //------------------------
@@ -583,12 +666,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             //Travel location2
             try {
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -602,12 +685,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             } catch (error) {
                 console.log("Retrying..|Trip Location 2 selection...");
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -621,21 +704,21 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date2
-            const inputSelector10 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:18\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelector10 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:20\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelector10, { visible: true });
             await page.click(inputSelector10, { clickCount: 3 });
             await page.keyboard.press('Backspace');
             await page.type(inputSelector10, StartDate2); // Replace StartDate2 with your actual value
 
             // End Date2
-            const inputSelector11 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelector11 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:21\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelector11, { visible: true });
             await page.click(inputSelector11, { clickCount: 3 });
             await page.keyboard.press('Backspace');
             await page.type(inputSelector11, EndDate2); // Replace EndDate2 with your actual value
 
             //Leaving From
-            const inputSelector12 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:20\\:screenEntryValue\\:\\:content"]';
+            const inputSelector12 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelector12, { visible: true });
             await page.click(inputSelector12, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -643,7 +726,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To (Trip 2)
-            const inputSelectorGoingTo2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:21\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo2, { visible: true });
             await page.click(inputSelectorGoingTo2, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -653,12 +736,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((DurationValue) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === DurationValue) {
@@ -672,12 +755,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Flight Duration 2 Selection...");
                 // Flight Duration2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((DurationValue) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === DurationValue) {
@@ -692,12 +775,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired2) {
@@ -711,12 +794,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Ticket Required2 selection...");
                 // Ticket Required2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired2) {
@@ -728,6 +811,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, TicketRequired2);
             }
 
+            // Departure Time2 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime2)) {
                 // Departure Time2
                 const inputSelectorDepartureTime2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:screenEntryValueDate\\:\\:content"]';
@@ -737,17 +822,18 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime2, DepartureTime2); // e.g., '9:15 AM'
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Cash", "Agent Arrangement")
                 await page.evaluate((HotelBooking2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking2) {
@@ -761,13 +847,13 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Hotel Booking2 selection...");
                 // Hotel Booking2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Cash", "Agent Arrangement")
                 await page.evaluate((HotelBooking2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking2) {
@@ -784,12 +870,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             //Travel location2
             try {
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -803,12 +889,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             } catch (error) {
                 console.log("Retrying..|Trip Location 2 selection...");
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:17\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -822,21 +908,21 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date2
-            const inputSelector10 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:18\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelector10 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:20\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelector10, { visible: true });
             await page.click(inputSelector10, { clickCount: 3 });
             await page.keyboard.press('Backspace');
             await page.type(inputSelector10, StartDate2); // Replace StartDate2 with your actual value
 
             // End Date2
-            const inputSelector11 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:19\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelector11 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:21\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelector11, { visible: true });
             await page.click(inputSelector11, { clickCount: 3 });
             await page.keyboard.press('Backspace');
             await page.type(inputSelector11, EndDate2); // Replace EndDate2 with your actual value
 
             //Leaving From
-            const inputSelector12 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:20\\:screenEntryValue\\:\\:content"]';
+            const inputSelector12 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelector12, { visible: true });
             await page.click(inputSelector12, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -844,7 +930,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To (Trip 2)
-            const inputSelectorGoingTo2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:21\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo2, { visible: true });
             await page.click(inputSelectorGoingTo2, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -854,12 +940,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((DurationValue) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === DurationValue) {
@@ -873,12 +959,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Flight Duration 2 Selection...");
                 // Flight Duration2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((DurationValue) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:22\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === DurationValue) {
@@ -893,12 +979,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired2) {
@@ -912,12 +998,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Ticket Required2 selection...");
                 // Ticket Required2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:23\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:25\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired2) {
@@ -929,6 +1015,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, TicketRequired2);
             }
 
+            // Departure Time2 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime2)) {
                 // Departure Time2
                 const inputSelectorDepartureTime2 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:24\\:screenEntryValueDate\\:\\:content"]';
@@ -938,17 +1026,18 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime2, DepartureTime2); // e.g., '9:15 AM'
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Cash", "Agent Arrangement")
                 await page.evaluate((HotelBooking2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking2) {
@@ -962,13 +1051,13 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying..|Hotel Booking2 selection...");
                 // Hotel Booking2
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Cash", "Agent Arrangement")
                 await page.evaluate((HotelBooking2) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:27\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:29\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking2) {
@@ -992,12 +1081,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Trip Location3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TripLocation3) {
@@ -1011,12 +1100,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying Trip Location 3 selection...");
                 // Trip Location3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TripLocation3) {
@@ -1029,7 +1118,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date3
-            const inputSelectorStartDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:32\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorStartDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:34\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorStartDate3, { visible: true });
             await page.click(inputSelectorStartDate3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1037,7 +1126,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // End Date3
-            const inputSelectorEndDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorEndDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:35\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorEndDate3, { visible: true });
             await page.click(inputSelectorEndDate3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1045,7 +1134,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Leaving From3
-            const inputSelectorLeavingFrom3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:34\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorLeavingFrom3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorLeavingFrom3, { visible: true });
             await page.click(inputSelectorLeavingFrom3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1053,7 +1142,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To3
-            const inputSelectorGoingTo3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:35\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo3, { visible: true });
             await page.click(inputSelectorGoingTo3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1063,12 +1152,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired3) {
@@ -1082,12 +1171,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Ticket Required3");
                 // Ticket Required3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired3) {
@@ -1102,12 +1191,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1122,12 +1211,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Flight Duration3");
                 // Flight Duration3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1140,6 +1229,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, FlightDuration3); // Pass a string like "Less Than 10 Hours" or "More Than 10 Hours"
             }
 
+            // Departure Time3 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime3)) {
                 // Departure Time3
                 const inputSelectorDepartureTime3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:screenEntryValueDate\\:\\:content"]';
@@ -1149,17 +1240,18 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime3, DepartureTime3); // e.g., "9:15 AM"
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Agent Arrangement" or "Cash")
                 await page.evaluate((HotelBooking3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking3) {
@@ -1173,13 +1265,13 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.error("Retry selecting Hotel Booking3:", error);
                 // Hotel Booking3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Agent Arrangement" or "Cash")
                 await page.evaluate((HotelBooking3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking3) {
@@ -1196,12 +1288,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Trip Location3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TripLocation3) {
@@ -1215,12 +1307,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying Trip Location 3 selection...");
                 // Trip Location3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:31\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TripLocation3) {
@@ -1233,7 +1325,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date3
-            const inputSelectorStartDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:32\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorStartDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:34\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorStartDate3, { visible: true });
             await page.click(inputSelectorStartDate3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1241,7 +1333,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // End Date3
-            const inputSelectorEndDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:33\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorEndDate3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:35\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorEndDate3, { visible: true });
             await page.click(inputSelectorEndDate3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1249,7 +1341,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Leaving From3
-            const inputSelectorLeavingFrom3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:34\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorLeavingFrom3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorLeavingFrom3, { visible: true });
             await page.click(inputSelectorLeavingFrom3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1257,7 +1349,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To3
-            const inputSelectorGoingTo3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:35\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo3, { visible: true });
             await page.click(inputSelectorGoingTo3, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1267,12 +1359,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired3) {
@@ -1286,12 +1378,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Ticket Required3");
                 // Ticket Required3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:36\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:39\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired3) {
@@ -1306,12 +1398,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1326,12 +1418,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Flight Duration3");
                 // Flight Duration3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:37\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1344,6 +1436,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, FlightDuration3); // Pass a string like "Less Than 10 Hours" or "More Than 10 Hours"
             }
 
+            // Departure Time3 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime3)) {
                 // Departure Time3
                 const inputSelectorDepartureTime3 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:38\\:screenEntryValueDate\\:\\:content"]';
@@ -1353,17 +1447,18 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime3, DepartureTime3); // e.g., "9:15 AM"
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Agent Arrangement" or "Cash")
                 await page.evaluate((HotelBooking3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking3) {
@@ -1377,13 +1472,13 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.error("Retry selecting Hotel Booking3:", error);
                 // Hotel Booking3
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 // Select desired option (e.g., "Agent Arrangement" or "Cash")
                 await page.evaluate((HotelBooking3) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:41\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:43\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking3) {
@@ -1407,12 +1502,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Trip Location4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1427,12 +1522,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Trip Location4:", error);
                 // Trip Location4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1446,7 +1541,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date4
-            const inputSelectorStartDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:46\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorStartDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:48\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorStartDate4, { visible: true });
             await page.click(inputSelectorStartDate4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1454,7 +1549,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // End Date4
-            const inputSelectorEndDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorEndDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:49\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorEndDate4, { visible: true });
             await page.click(inputSelectorEndDate4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1462,7 +1557,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Leaving From4
-            const inputSelectorLeavingFrom4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:48\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorLeavingFrom4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorLeavingFrom4, { visible: true });
             await page.click(inputSelectorLeavingFrom4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1470,7 +1565,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To4
-            const inputSelectorGoingTo4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:49\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo4, { visible: true });
             await page.click(inputSelectorGoingTo4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1480,12 +1575,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === FlightDuration4) {
@@ -1499,12 +1594,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Flight Duration4:", error);
                 // Flight Duration4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === FlightDuration4) {
@@ -1519,12 +1614,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired4) {
@@ -1538,12 +1633,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying Ticket Required 4 Selection...")
                 // Ticket Required4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired4) {
@@ -1555,6 +1650,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, TicketRequired4); // Example: "Yes" or "No"
             }
 
+            // Departure Time4 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime4)) {
                 // Departure Time4
                 const inputSelectorDepartureTime4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:screenEntryValueDate\\:\\:content"]';
@@ -1564,16 +1661,17 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime4, DepartureTime4); // e.g., "9:30 AM"
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((HotelBooking4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking4) {
@@ -1587,12 +1685,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.error('Retry selecting Hotel Booking 4:', error);
                 // Hotel Booking4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((HotelBooking4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking4) {
@@ -1609,12 +1707,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Trip Location4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1629,12 +1727,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Trip Location4:", error);
                 // Trip Location4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TripLocation4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:45\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:lovScreenEntryValue\\:\\:pop li'
                     );
 
                     for (let option of options) {
@@ -1648,7 +1746,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             }
 
             // Start Date4
-            const inputSelectorStartDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:46\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorStartDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:48\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorStartDate4, { visible: true });
             await page.click(inputSelectorStartDate4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1656,7 +1754,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // End Date4
-            const inputSelectorEndDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:47\\:screenEntryValueDate\\:\\:content"]';
+            const inputSelectorEndDate4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:49\\:screenEntryValueDate\\:\\:content"]';
             await page.waitForSelector(inputSelectorEndDate4, { visible: true });
             await page.click(inputSelectorEndDate4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1664,7 +1762,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Leaving From4
-            const inputSelectorLeavingFrom4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:48\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorLeavingFrom4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorLeavingFrom4, { visible: true });
             await page.click(inputSelectorLeavingFrom4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1672,7 +1770,7 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             await page.keyboard.press('Tab');
 
             // Going To4
-            const inputSelectorGoingTo4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:49\\:screenEntryValue\\:\\:content"]';
+            const inputSelectorGoingTo4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:screenEntryValue\\:\\:content"]';
             await page.waitForSelector(inputSelectorGoingTo4, { visible: true });
             await page.click(inputSelectorGoingTo4, { clickCount: 3 });
             await page.keyboard.press('Backspace');
@@ -1682,12 +1780,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Flight Duration4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === FlightDuration4) {
@@ -1701,12 +1799,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retry selecting Flight Duration4:", error);
                 // Flight Duration4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((FlightDuration4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:50\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === FlightDuration4) {
@@ -1721,12 +1819,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
             try {
                 // Ticket Required4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired4) {
@@ -1740,12 +1838,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.log("Retrying Ticket Required 4 Selection...")
                 // Ticket Required4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((TicketRequired4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:51\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:53\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === TicketRequired4) {
@@ -1757,6 +1855,8 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 }, TicketRequired4); // Example: "Yes" or "No"
             }
 
+            // Departure Time4 disabled — only Trip 1 uses the new Hour/AM-PM dropdowns for now
+            /*
             if (exists(DepartureTime4)) {
                 // Departure Time4
                 const inputSelectorDepartureTime4 = 'input[id="_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:52\\:screenEntryValueDate\\:\\:content"]';
@@ -1766,16 +1866,17 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 await page.type(inputSelectorDepartureTime4, DepartureTime4); // e.g., "9:30 AM"
                 await page.keyboard.press('Tab');
             }
+            */
 
             try {
                 // Hotel Booking4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((HotelBooking4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking4) {
@@ -1789,12 +1890,12 @@ async function KSABusinessTripRequest(browser, page, body, res, plan, personNumb
                 console.error('Retry selecting Hotel Booking 4:', error);
                 // Hotel Booking4
                 await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { visible: true });
-                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
-                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop', { visible: true });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { visible: true });
+                await page.click('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:drop', { clickCount: 1 });
+                await page.waitForSelector('#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop', { visible: true });
                 await page.evaluate((HotelBooking4) => {
                     const options = document.querySelectorAll(
-                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:55\\:lovScreenEntryValue\\:\\:pop li'
+                        '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:r1\\:1\\:evIter\\:57\\:lovScreenEntryValue\\:\\:pop li'
                     );
                     for (let option of options) {
                         if (option.innerText.trim() === HotelBooking4) {

@@ -1,21 +1,12 @@
 const AutomationError = require('../Utils/CustomError');
 
+// requestTypes: plan name -> request type function (RequestTypes/index.js)
 async function Scenario(res, body, page, browser, username, password, url,
     Login,
     PersonManagement,
     awardCompensation,
     HandleResponse,
-    INDCommunicationAllowance,
-    INDOvertimeRequest,
-    INDBusinessTripRequest,
-    KSABuisnessTripRequest,
-    KSACommunicationAllowance,
-    KSAOvertimeRequest,
-    KSASchoolSupportProgram,
-    UAEBusinessTripRequest,
-    UAECommunicationAllowance,
-    UAEOvertimeRequest,
-    UAESchoolSupportProgram,
+    requestTypes,
 ) {
     // Person Number is required for the automation
     const { personNumber, plan, RequestID } = body;
@@ -38,24 +29,7 @@ async function Scenario(res, body, page, browser, username, password, url,
     await PersonManagement(page, personNumber);
 
     // Award Compensation
-    await awardCompensation(
-        page,
-        browser,
-        body,
-        res, plan, personNumber, RequestID,
-        HandleResponse,
-        INDCommunicationAllowance,
-        INDOvertimeRequest,
-        INDBusinessTripRequest,
-        KSABuisnessTripRequest,
-        KSACommunicationAllowance,
-        KSAOvertimeRequest,
-        KSASchoolSupportProgram,
-        UAEBusinessTripRequest,
-        UAECommunicationAllowance,
-        UAEOvertimeRequest,
-        UAESchoolSupportProgram
-    );
+    await awardCompensation(page, browser, body, res, plan, personNumber, RequestID, HandleResponse, requestTypes);
 
     //Delay
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));

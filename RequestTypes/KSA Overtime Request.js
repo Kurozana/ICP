@@ -213,7 +213,7 @@ async function KSAOvertimeRequest(browser, page, body, res, plan, personNumber, 
     //Wait for error popup
     try {
         await page.waitForSelector('#DhtmlZOrderManagerLayerContainer #_FOd1\\:\\:popup-container', { visible: true, timeout: 3000 });
-        errorMessage = await page.$eval('#_FOd1\\:\\:msgDlg\\:\\:_ccntr .x1mu span', (el) => el.textContent.trim());
+        const errorMessage = await page.$eval('#_FOd1\\:\\:msgDlg\\:\\:_ccntr .x1mu span', (el) => el.textContent.trim());
         await page.click('#_FOd1\\:\\:msgDlg\\:\\:cancel');
         throw new AutomationError(errorMessage, plan, personNumber, RequestID);
     } catch (error) {

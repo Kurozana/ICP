@@ -115,7 +115,7 @@ async function INDCommunicationAllowance(browser, page, body, res, plan, personN
     //Wait for error popup
     try {
         await page.waitForSelector('#_FOd1\\:\\:popup-container', { visible: true, timeout: 3000 });
-        errorMessage = await page.$eval('#_FOd1\\:\\:msgDlg\\:\\:_ccntr .x1mu span', (el) => el.textContent.trim());
+        const errorMessage = await page.$eval('#_FOd1\\:\\:msgDlg\\:\\:_ccntr .x1mu span', (el) => el.textContent.trim());
         throw new AutomationError(errorMessage, plan, personNumber, RequestID);
     } catch (error) {
         if (error instanceof AutomationError) {

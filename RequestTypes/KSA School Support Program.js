@@ -16,7 +16,7 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         PaidAmount,
         Child,
         SchoolName,
-        ChildGrade
+        GradeOfChild
     } = body;
 
     console.log('validating fields of :' + plan);
@@ -30,6 +30,8 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
     if (!ClaimType) missingFields.push('ClaimType');
     if (!PaidAmount) missingFields.push('PaidAmount');
     if (!Child) missingFields.push('Child');
+    if (!SchoolName) missingFields.push('SchoolName');
+    if (!GradeOfChild) missingFields.push('GradeOfChild');
     if (missingFields.length > 0) {
         throw new AutomationError('Missing required field(s): ' + missingFields.join(', '), plan, personNumber, RequestID);
     }
@@ -101,7 +103,7 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         await sleep(3000);
         await page.waitForSelector(pop, { visible: true });
         const childFound = await page.evaluate((popSel, childName) => {
-            const norm = (s) => (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            const norm = (s) => (s || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
             const target = norm(childName);
             const items = Array.from(document.querySelectorAll(popSel));
             for (let item of items) {
@@ -156,8 +158,8 @@ async function KSASchoolSupportProgram(browser, page, body, res, plan, personNum
         }
 
         // Child Grade (evIter:40) - optional
-        if (exists(ChildGrade)) {
-            await fillText(40, ChildGrade);
+        if (exists(GradeOfChild)) {
+            await fillText(40, GradeOfChild);
         }
     }
 
