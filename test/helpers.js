@@ -20,6 +20,8 @@ function fakePage() {
                     return true;
                 };
             }
+            // Fusion accepts every award: the wait after OK reports the dialog as closed
+            if (key === 'waitForFunction') return async () => ({ jsonValue: async () => ({ closed: true }) });
             return async () => null;
         },
     });
