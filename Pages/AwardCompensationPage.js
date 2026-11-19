@@ -46,39 +46,30 @@ async function awardCompensation(page, browser, body, res, plan, personNumber, R
     const submitButtonSelector = '#_FOpt1\\:_FOr1\\:0\\:_FONSr2\\:0\\:MAt1\\:0\\:AP1\\:r2\\:0\\:AT3\\:_ATp\\:d2\\:\\:ok';
     await page.waitForSelector(submitButtonSelector, { visible: true });
     await page.click(submitButtonSelector);
-    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));
-    
-    for (let i = 0; i < 5; i++) {
-    try {
-        await page.waitForSelector('[id*="msgDlg"] [class*="x1mu"]', { visible: true, timeout: 2000 });
-        const errorText = await page.$eval('[id*="msgDlg"] [class*="x1mu"]', el => el.innerText.trim());
-        if(errorText){
-            console.log("❌ Inline error detected:", errorText);
-            throw new AutomationError(errorText, plan, personNumber, RequestID);
-        }
-        console.log("❌ Inline error detected:", errorText);
-    } catch (e) {
-        if (e instanceof AutomationError) {
-            throw new AutomationError(e.message, e.plan, e.personNumber, e.RequestID);
-        }
-        console.log('attempting to find error message : ' + i);
-    }
-    }
 
-    try {
-        await page.waitForSelector('[id*="popup-container"] [id*="msgDlg"] .x1mu span', { timeout: 5000 });
-        const errorMessage = await page.$eval(
-            '[id*="popup-container"] [id*="msgDlg"] .x1mu span',
-            el => el.textContent.trim()
-        );
-        console.log("❌ Error popup detected:", errorMessage);
-        throw new AutomationError(errorMessage, plan, personNumber, RequestID);
-    } catch (error) {
-        if (error instanceof AutomationError) {
-            throw new AutomationError(error.message, error.plan, error.personNumber, error.RequestID);
-        }
-        console.error("No Error popup detected");
+    // After OK, Fusion either closes the award dialog (accepted) or shows a message dialog
+    // (rejected, e.g. "ORA-20001: The data type DATE of parameter ..."). Fusion's formula can take
+    // longer than a few seconds, so wait for whichever comes first instead of checking a fixed number of times.
+    // Verified on the live UAT form: the message text sits in [id*="msgDlg"] .x1mu.
+    const outcome = await page.waitForFunction(() => {
+        const visible = (el) => !!el && (el.offsetParent !== null || el.getClientRects().length > 0);
+        const message = [...document.querySelectorAll('[id*="msgDlg"] [class*="x1mu"]')].find(visible);
+        if (message && message.innerText.trim()) return { error: message.innerText.trim() };
+        const dialog = document.querySelector('[id$="CreatePopup::popup-container"]');
+        if (!visible(dialog)) return { closed: true };
+        return false;
+    }, { timeout: 60000, polling: 500 })
+        .then((handle) => handle.jsonValue())
+        .catch(() => null);
+
+    if (!outcome) {
+        throw new AutomationError('Fusion did not accept the award: the dialog stayed open after OK with no message (60 s)', plan, personNumber, RequestID);
     }
+    if (outcome.error) {
+        console.log('❌ Fusion rejected the award:', outcome.error);
+        throw new AutomationError(outcome.error, plan, personNumber, RequestID);
+    }
+    console.log('Award accepted by Fusion (dialog closed)');
 }
 module.exports = awardCompensation;
 
