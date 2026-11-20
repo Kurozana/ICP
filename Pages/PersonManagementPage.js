@@ -1,6 +1,8 @@
 const navigateToIndividualCompensation = async (page, personNumber) => {
-    // Wait for navigation to complete
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    // Login only returns once the browser is already inside Fusion (after MFA), so the page load
+    // has usually finished by now. Waiting for a new navigation here would time out, so wait for
+    // the Person Number field instead: it works whether the page is still loading or already loaded.
+    await page.waitForSelector('input[id="_FOpt1:_FOr1:0:_FONSr2:0:MAt1:0:pt1:Perso1:0:SP3:q1:value10::content"]', { visible: true, timeout: 60000 });
 
     try {
         // Wait for and type person number
